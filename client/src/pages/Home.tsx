@@ -192,11 +192,16 @@ export default function Home() {
           </div>
 
           <Button
-            onClick={() => (window.location.href = getLoginUrl())}
+            onClick={() => {
+              const loginUrl = getLoginUrl();
+              if (loginUrl) {
+                window.location.href = loginUrl;
+              }
+            }}
             size="lg"
             className="w-full"
           >
-            Mit Manus anmelden
+            Anmelden
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
