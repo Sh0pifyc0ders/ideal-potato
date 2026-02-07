@@ -44,24 +44,35 @@ export async function initializeFaceDetector(): Promise<boolean> {
       return false;
     }
 
-    const visionFileset = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-    );
+    const localBaseUrl = new URL(
+      `${import.meta.env.BASE_URL ?? "/"}mediapipe/`,
+      window.location.origin
+    ).toString();
 
-    // Create FaceLandmarker instance
-    faceLandmarker = await FaceLandmarker.createFromOptions(
-      visionFileset,
-      {
+    const createLandmarker = async (baseUrl: string) => {
+      const visionFileset = await FilesetResolver.forVisionTasks(baseUrl);
+      return FaceLandmarker.createFromOptions(visionFileset, {
         baseOptions: {
-          modelAssetPath:
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm/face_landmarker.task",
+          modelAssetPath: `${baseUrl}face_landmarker.task`,
         },
         runningMode: "IMAGE",
         numFaces: 1,
         outputFaceBlendshapes: false,
         outputFacialTransformationMatrixes: false,
-      }
-    );
+      });
+    };
+
+    try {
+      faceLandmarker = await createLandmarker(localBaseUrl);
+    } catch (error) {
+      console.warn(
+        "Failed to load local MediaPipe assets, falling back to CDN.",
+        error
+      );
+      const cdnBaseUrl =
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm/";
+      faceLandmarker = await createLandmarker(cdnBaseUrl);
+    }
 
     faceMeshInitialized = true;
     faceMeshAvailable = true;
