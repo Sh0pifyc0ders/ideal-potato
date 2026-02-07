@@ -41,7 +41,7 @@ Then open `http://localhost:3000` in a browser.
 ## Deploy on Render
 
 1. Create a new **Web Service** from this repo.
-2. Render will automatically detect the included `render.yaml`.
+2. Render will automatically detect the included `render.yaml`, which uses the root-level `Dockerfile`.
 3. Click **Deploy** and wait for the build to finish.
 
 Render will provide a public URL so the app can be used online without installation.
