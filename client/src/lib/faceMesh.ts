@@ -7,24 +7,19 @@ import type { Point, Landmarks } from "./angleCalculation";
 
 let faceMeshInitialized = false;
 let faceMeshAvailable = false;
-let faceMesh: any = null;
+let faceLandmarker: any = null;
 
 /**
  * MediaPipe Face Mesh landmark indices for cephalometric points
  * Reference: https://github.com/google/mediapipe/blob/master/mediapipe/python/solutions/face_mesh_connections.py
  */
 const FACE_MESH_LANDMARKS = {
-  // Nasion (N): Between eyebrows at bridge of nose
-  // Using landmarks 168 (glabella area) and surrounding points
-  NASION: [168, 6, 197, 195, 5],
-
-  // Subspinale (A): Below nose at anterior maxilla
-  // Using landmarks around upper lip area
-  SUBSPINALE: [164, 165, 92, 186, 57],
-
-  // Sella (S): Internal cranial landmark - estimated from facial features
-  // Using landmarks around the nasal bridge and upper face
-  SELLA: [168, 6, 197, 195, 5],
+  // Nasion (N): Glabella / nasal root area
+  NASION: [168],
+  // Upper lip / subspinale approximation (below nose)
+  SUBSPINALE: [13, 2, 98],
+  // Forehead reference for Sella approximation
+  FOREHEAD: [10],
 };
 
 /**
@@ -39,38 +34,41 @@ export async function initializeFaceDetector(): Promise<boolean> {
   try {
     // Dynamically import MediaPipe
     const mediapipe = await import("@mediapipe/tasks-vision");
-    const FaceMesh = (mediapipe as any).FaceMesh;
+    const FaceLandmarker = (mediapipe as any).FaceLandmarker;
+    const FilesetResolver = (mediapipe as any).FilesetResolver;
 
-    if (!FaceMesh) {
-      console.warn("MediaPipe FaceMesh not available");
+    if (!FaceLandmarker || !FilesetResolver) {
+      console.warn("MediaPipe FaceLandmarker not available");
       faceMeshInitialized = true;
       faceMeshAvailable = false;
       return false;
     }
 
-    // Create FaceMesh instance
-    faceMesh = await FaceMesh.createFromOptions(
-      await (window as any).FilesetResolver.forVisionOnWeb({
-        locateFile: (file: string) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm/${file}`;
-        },
-      }),
+    const visionFileset = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+    );
+
+    // Create FaceLandmarker instance
+    faceLandmarker = await FaceLandmarker.createFromOptions(
+      visionFileset,
       {
         baseOptions: {
           modelAssetPath:
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm/face_landmarker.task",
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm/face_landmarker.task",
         },
         runningMode: "IMAGE",
         numFaces: 1,
+        outputFaceBlendshapes: false,
+        outputFacialTransformationMatrixes: false,
       }
     );
 
     faceMeshInitialized = true;
     faceMeshAvailable = true;
-    console.log("MediaPipe FaceMesh initialized successfully");
+    console.log("MediaPipe FaceLandmarker initialized successfully");
     return true;
   } catch (error) {
-    console.warn("Failed to initialize MediaPipe FaceMesh:", error);
+    console.warn("Failed to initialize MediaPipe FaceLandmarker:", error);
     faceMeshInitialized = true;
     faceMeshAvailable = false;
     return false;
@@ -110,7 +108,7 @@ function calculateAverageLandmark(
 export async function detectLandmarks(
   imageElement: HTMLImageElement
 ): Promise<Landmarks | null> {
-  if (!faceMeshAvailable || !faceMesh) {
+  if (!faceMeshAvailable || !faceLandmarker) {
     return null;
   }
 
@@ -132,7 +130,7 @@ export async function detectLandmarks(
     ctx.drawImage(imageElement, 0, 0);
 
     // Detect face landmarks
-    const result = faceMesh.detect(canvas);
+    const result = faceLandmarker.detect(canvas);
 
     if (!result || !result.faceLandmarks || result.faceLandmarks.length === 0) {
       console.warn("No face detected");
@@ -161,14 +159,21 @@ export async function detectLandmarks(
       height
     );
 
-    // For Sella, we need to estimate based on internal cranial structure
-    // Using nasion as reference and calculating backward
-    const sella = nasion
-      ? {
-          x: nasion.x * 0.7, // Shift left (internal position)
-          y: nasion.y * 0.6, // Shift up
-        }
-      : null;
+    const forehead = calculateAverageLandmark(
+      landmarks,
+      FACE_MESH_LANDMARKS.FOREHEAD,
+      width,
+      height
+    );
+
+    // Estimate Sella using a vector from forehead to nasion to move slightly posterior/superior.
+    const sella =
+      nasion && forehead
+        ? {
+            x: nasion.x + (nasion.x - forehead.x) * 0.2,
+            y: nasion.y + (nasion.y - forehead.y) * 0.6,
+          }
+        : null;
 
     if (!nasion || !subspinale || !sella) {
       console.warn("Could not calculate all landmarks");

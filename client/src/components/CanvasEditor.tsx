@@ -52,21 +52,25 @@ export default function CanvasEditor({
     img.src = imageUrl;
   }, [imageUrl]);
 
-  // Initialize landmarks if image is loaded and no landmarks provided
+  // Sync with externally provided landmarks (e.g., auto-detection)
+  useEffect(() => {
+    if (initialLandmarks) {
+      setLandmarks(initialLandmarks);
+    }
+  }, [initialLandmarks]);
+
+  // Initialize draft landmarks for manual adjustments (do not propagate until user moves)
   useEffect(() => {
     if (image && !landmarks) {
-      // Initialize with default positions (center of image)
       const centerX = image.width / 2;
       const centerY = image.height / 2;
-      const newLandmarks: Landmarks = {
+      setLandmarks({
         S: { x: centerX - 50, y: centerY - 100 },
         N: { x: centerX, y: centerY - 50 },
         A: { x: centerX, y: centerY + 50 },
-      };
-      setLandmarks(newLandmarks);
-      onLandmarksChange(newLandmarks);
+      });
     }
-  }, [image, landmarks, onLandmarksChange]);
+  }, [image, landmarks]);
 
   // Draw canvas
   useEffect(() => {
