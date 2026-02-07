@@ -150,6 +150,7 @@ export default function Home() {
   }
 
   if (!isAuthenticated) {
+    const loginUrl = getLoginUrl();
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
         <Card className="max-w-md w-full p-8 space-y-6">
@@ -193,13 +194,13 @@ export default function Home() {
 
           <Button
             onClick={() => {
-              const loginUrl = getLoginUrl();
               if (loginUrl) {
                 window.location.href = loginUrl;
               }
             }}
             size="lg"
             className="w-full"
+            disabled={!loginUrl}
           >
             Anmelden
           </Button>
