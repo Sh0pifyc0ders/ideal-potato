@@ -20,6 +20,7 @@ import { trpc } from "@/lib/trpc";
 
 export default function Home() {
   const { user, loading, isAuthenticated, logout } = useAuth();
+  const loginUrl = getLoginUrl();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [landmarks, setLandmarks] = useState<Landmarks | null>(null);
@@ -149,70 +150,6 @@ export default function Home() {
     );
   }
 
-  if (!isAuthenticated) {
-    const loginUrl = getLoginUrl();
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">SNA Angle Analyzer</h1>
-            <p className="text-muted-foreground">
-              Kephalometrische Analyse von Profilbildern
-            </p>
-          </div>
-
-          <div className="space-y-4 text-sm text-muted-foreground">
-            <div className="flex gap-3">
-              <div className="text-lg">📸</div>
-              <div>
-                <p className="font-medium text-foreground">Automatische Erkennung</p>
-                <p>KI-gestützte Landmarken-Detektion mit MediaPipe</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="text-lg">✏️</div>
-              <div>
-                <p className="font-medium text-foreground">Manuelle Anpassung</p>
-                <p>Präzise Korrektur der Messpunkte</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="text-lg">📊</div>
-              <div>
-                <p className="font-medium text-foreground">Medizinische Einordnung</p>
-                <p>Klassifizierung nach klinischen Standards</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="text-lg">🔒</div>
-              <div>
-                <p className="font-medium text-foreground">Datenschutz</p>
-                <p>Lokale Verarbeitung, keine Server-Uploads</p>
-              </div>
-            </div>
-          </div>
-
-          <Button
-            onClick={() => {
-              if (loginUrl) {
-                window.location.href = loginUrl;
-              }
-            }}
-            size="lg"
-            className="w-full"
-            disabled={!loginUrl}
-          >
-            Anmelden
-          </Button>
-
-          <p className="text-xs text-center text-muted-foreground">
-            Melden Sie sich an, um Ihre Messungen zu speichern und auf die Messhistorie zuzugreifen.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
   const angle =
     landmarks && validateLandmarks(landmarks) ? calculateSNAAngle(landmarks) : null;
 
@@ -229,14 +166,28 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={logout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Abmelden
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <div className="text-right">
+                  <p className="text-sm font-medium">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={logout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Abmelden
+                </Button>
+              </>
+            ) : loginUrl ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  window.location.href = loginUrl;
+                }}
+              >
+                Anmelden (optional)
+              </Button>
+            ) : null}
           </div>
         </div>
       </header>
