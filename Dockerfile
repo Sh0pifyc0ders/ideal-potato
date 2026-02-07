@@ -11,6 +11,7 @@ FROM base AS deps
 
 COPY package.json pnpm-lock.yaml ./
 COPY patches ./patches
+COPY scripts ./scripts
 
 RUN pnpm install --frozen-lockfile
 
@@ -28,6 +29,7 @@ ENV PORT=3000
 
 COPY package.json pnpm-lock.yaml ./
 COPY patches ./patches
+COPY scripts ./scripts
 COPY --from=deps /app/node_modules /app/node_modules
 COPY --from=build /app/dist /app/dist
 
